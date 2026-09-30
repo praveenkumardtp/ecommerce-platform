@@ -1,0 +1,42 @@
+version: '3.8'
+
+services:
+  ecommerce-db:
+    image: postgres:16-alpine
+    container_name: ecommerce-postgres
+    restart: unless-stopped
+    environment:
+      POSTGRES_DB: ecommerce_db
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+    ports:
+      - "5433:5432"
+    volumes:
+      - ecommerce_pgdata:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres -d ecommerce_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+
+  ecommerce-backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: ecommerce-backend-app
+    restart: unless-stopped
+    depends_on:
+      ecommerce-db:
+        condition: service_healthy
+    environment:
+      SPRING_DATASOURCE_URL: jdbc:postgresql://ecommerce-db:5432/ecommerce_db
+      SPRING_DATASOURCE_USERNAME: postgres
+      SPRING_DATASOURCE_PASSWORD: postgres
+      SPRING_PROFILES_ACTIVE: prod
+      JWT_SECRET: 73357638792F423F4528482B4D6251655468576D5A7134743777217A25432A46
+      JWT_EXPIRATION_MS: 86400000
+    ports:
+      - "8081:8081"
+
+volumes:
+  ecommerce_pgdata:
